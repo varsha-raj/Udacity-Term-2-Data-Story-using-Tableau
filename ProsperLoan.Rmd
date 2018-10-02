@@ -1,0 +1,1100 @@
+---
+title: "Prosper Loan Data Exploration"
+author: "Varsha Raj"
+date: "August 2, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Data analysis was conducted to explore prosper loan data. 
+
+Prosper loan is a peer to peer loan lending company that provide loan at very low rates. These loans are typically funded by multiple people within United States. The investors who fund these loans use prosper ratings, a proprietary system developed by prosper that assigns ratings to every loan application to determine the applicant's level of risk. The ratings represent an estimated range of annualized loss rate range to the investor. Higher the ratings, lower the risk.
+
+Before begining to analyze the data, it is often a good practise to first look at the raw data. This could be either looking at just the first few rows in the data or even using a spreadsheet to just hover around to look for any plausible data anamolies.
+
+In this case, data was viewed in a spreadsheet.
+
+This helps in data cleaning and processing and to also get a general idea on the data itself.
+
+For this analysis, following R packages were used.
+
+```{r, message = FALSE}
+#Install following packages
+library(dplyr)
+library(ggplot2)
+library(lubridate)
+library(directlabels)
+
+
+#generalized theme for plots, feel free to play around!
+
+my_theme <- theme(axis.text.x=element_text(size=8),
+                  axis.text.y=element_text(size=8),
+                  axis.title.x=element_text(size=8),
+                  axis.title.y=element_text(size=8),
+                  legend.title=element_text(size=8),
+                  legend.text=element_text(size=8),
+                  plot.title=element_text(size=8, hjust = 0.5, face='bold'),
+                  #legend.text=element_blank(),
+                  panel.background = element_rect(fill = "white", colour = NA),
+                  panel.border = 
+                    element_rect(fill = NA, color= 'grey20', size=0.4),
+                  legend.key.size = unit(0, "cm"),
+                  legend.key = element_rect(colour = NA, fill=NA),
+                  panel.grid.major = element_line(size=0.2, colour = 'gray80'),
+                  #panel.grid.major = element_blank(),
+                  panel.grid.minor = 
+                    element_line(size=0.05, colour = 'gray80'),
+                  axis.ticks = element_line(size=0.2, colour='gray60'),
+                  #panel.grid.minor = element_blank(),
+                  legend.key.height=unit(0.5,"line"),
+                  legend.key.width=unit(1,"line"),
+                  #legend.spacing.y=unit(-0.5, 'cm'))
+                  legend.margin = margin(t=0.1, unit ='cm'))
+```
+
+The next section reads the prosper loan in csv format and displays the different fields available in the data.
+
+```{r}
+# Read prosper loan data
+
+#set the file path to your local directory
+
+setwd('D:/udacity/ProsperLoanData')
+
+#read prosper loan data 
+
+prosper_loan <- read.csv('ProsperLoanData.csv', header = TRUE)
+
+# Clean header names/column names to remove any special characters if present
+
+names(prosper_loan) <- gsub(names(prosper_loan), pattern = "(\\.)+", replacement="")
+
+names(prosper_loan)
+
+```
+
+There are a total of 81 fields in this dataset. This analysis only uses susbet of the fields to explore.
+
+Next section prepares the data for analysis by performing a prelimanary data cleaning. 
+
+```{r}
+
+#Data cleaning to remove any duplicted values 
+
+prosper_loan <- prosper_loan %>%
+  
+  mutate(LoanKey = as.character(LoanKey)) %>% 
+  
+  distinct(LoanKey, .keep_all = TRUE) %>%
+  
+  filter(LoanOriginalAmount > 0) # Keep only data with loan amounts
+
+prosper_loan[prosper_loan == ""] <- NA #convert all white spaces to NA
+  
+```
+
+This section makes use of box-and-whisker plots to explore Loan Original Amount and Prosper Ratings for the three different terms (12 months/1 year, 36 months/3 years, 60 months/ 5 years).
+
+```{r}
+#Prepare the data for plots
+
+Section1DF <- prosper_loan %>%
+  
+  select(Term, ProsperRatingAlpha, ProsperRatingnumeric, 
+         
+         LoanOriginalAmount) %>% #select columns for the analysis
+  
+  na.omit() %>%# remove any missing data within the selected fields
+  
+  arrange(desc(ProsperRatingnumeric)) #arrange from highest score to lowest
+
+df1 <- Section1DF %>% filter(Term == 12) #extract only term 12 data
+
+#Plot df1, term 12 months
+
+n_fun <- function(x){
+  return(data.frame(y = max(x) + 1000, label = paste0("N = ", length(x)))) #function to print out the sample size 
+} #Note that this function is provided for all boxplots sp it easier to play around with positions with individual plots
+
+plot1 <- ggplot(df1, aes(ProsperRatingAlpha, LoanOriginalAmount)) +
+  stat_boxplot(geom = 'errorbar', width = .25) +
+  geom_boxplot(fill = 'grey', outlier.shape = 4, outlier.size = 3, 
+               outlier.colour = 'red', outlier.stroke = 1.5) +
+  stat_summary(fun.data = n_fun, color = 'darkred', geom = 'text', size = 3.5)
+
+plot2 <- plot1 + labs(x = '\nPropser Rating', 
+                      y = 'Loan Original Amount ($)\n', 
+                      title = 'Figure 1: Term 12 Months/1 Year') 
+  
+ratingorder <- c('AA', 'A', 'B', 'C', 'D', 'E', 'HR') # to display the ratings in the plot in a specific order
+
+plot3 <- plot2 + scale_x_discrete(limits = ratingorder) 
+
+plot4 <- plot3 + my_theme
+
+print(plot4)
+
+```
+
+```{r}
+#Plots df2, term 36 months
+
+df2 <- Section1DF %>% filter(Term == 36) #Extract 36 months data only
+
+n_fun <- function(x){
+  return(data.frame(y = max(x) + 1500, label = paste0("N = ", length(x)))) #function to print out the sample size 
+}
+
+plot1 <- ggplot(df2, aes(ProsperRatingAlpha, LoanOriginalAmount)) +
+  stat_boxplot(geom = 'errorbar', width = .25) +
+  geom_boxplot(fill = 'grey', outlier.shape = 4, outlier.size = 3, 
+               outlier.colour = 'red', outlier.stroke = 1.5) +
+  stat_summary(fun.data = n_fun, color = 'darkred', geom = 'text', size = 3.5)
+
+plot2 <- plot1 + labs(x = '\nPropser Rating', 
+                      y = 'Loan Original Amount ($)\n', 
+                      title = 'Figure 2: Term 36 Months/3 Years') 
+  
+ratingorder <- c('AA', 'A', 'B', 'C', 'D', 'E', 'HR')
+
+plot3 <- plot2 + scale_x_discrete(limits = ratingorder)
+
+plot4 <- plot3 + my_theme
+
+print(plot4)
+
+```
+
+Plots for Term 60 Months
+
+```{r}
+#Same steps as above for Term 60
+
+df3 <- Section1DF %>% filter(Term == 60)
+
+#Plot df1
+
+n_fun <- function(x){
+  return(data.frame(y = max(x) + 1500, label = paste0("N = ", length(x)))) #function to print ut the sample size 
+}
+
+plot1 <- ggplot(df3, aes(ProsperRatingAlpha, LoanOriginalAmount)) +
+  stat_boxplot(geom = 'errorbar', width = .25) +
+  geom_boxplot(fill = 'grey', outlier.shape = 4, outlier.size = 3, 
+               outlier.colour = 'red', outlier.stroke = 1.5) +
+  stat_summary(fun.data = n_fun, color = 'darkred', geom = 'text', size = 3.5)
+
+plot2 <- plot1 +labs(x = '\nPropser Rating', 
+                     y = 'Loan Original Amount ($)\n', 
+                     title = 'Figure 3: Term 60 Months/5 Years') 
+  
+  
+ratingorder <- c('AA', 'A', 'B', 'C', 'D', 'E', 'HR')
+
+plot3 <- plot2 + scale_x_discrete(limits = ratingorder)
+
+plot4 <- plot3 + my_theme
+
+print(plot4)
+
+```
+
+The maximum loan taken in 3-year and 5-year is around $ 35000 and about $ 25000 for term 1-year.
+
+Comparing the figures 1, 2 and 3, borrowers with the lowest prosper rating (HR) seem to prefer a 3-year loan term. The maximum numbers of borrowers were generally seen in the 3-year loan term for all prosper ratings.
+
+For the 1-year term loan, median loan amount ($ 3500 - $ 4000) borrowed is pretty consistent across all prosper ratings.  In terms 3-year and 5-year however, there is a noticeable difference in the median loan amounts. Median loan amounts for the top prosper ratings (AA and A) is considerably higher than the bottoms ratings like (D, E and HR).
+
+Number of borrowers in the AA group is relatively low in number when compared to the number of borrowers from other ratings. This could be because there are not many people who are given the top AA grade. Being in the AA band would mean maintaining an excellent credit records and are considered to have the lowest deafult risks.
+
+Another interesting observation between the terms is that the loan amounts range widely (minimum and maximum) across the top tier ratings (AA, A and B). This range start to shrink for lower prosper ratings. The reason here is because the borrowers under the lower tier of prosper ratings considering they are high risks are generally not granted large sums of loans. 
+
+
+Next section in the analysis explores the average number of investors for each prosper ratings.
+
+```{r}
+
+df4 <- prosper_loan %>%
+  
+  select(Term, ProsperRatingAlpha, ProsperRatingnumeric, Investors) %>% #select required fields for the analysis
+  
+  na.omit() %>% # remove missing data
+  
+  arrange(desc(ProsperRatingnumeric)) %>% #arrange in decending order
+  
+  group_by(Term, ProsperRatingAlpha) %>%
+  
+  summarize(AverageNo_investors = mean(Investors)) #Compute average no. of investors
+
+df4$Term <- as.factor(as.character(df4$Term)) #covert term columns to factor class type by first converting to character type.
+#R sometimes mishandles data class conversions
+
+plot1 <- ggplot()
+
+plot2 <- plot1 + geom_bar(data = df4, aes(x = ProsperRatingAlpha, 
+                                          y = AverageNo_investors, fill = Term), 
+                          
+                          stat = 'identity', position ='dodge', width = 0.75)
+                          
+plot3 <- plot2 + labs(x = '\nPropser Rating', 
+                      y = 'Average No. of Investors\n', 
+                      title = 'Figure 4: Average No. of Investors/Prosper Rating') 
+
+plot4 <-  plot3 + my_theme
+
+print(plot4)
+```
+
+As expected, the general trend is that higher the prosper ratings, higher the number of investors. From figure 4, it is also very evident that the investors prefer to invest in the longer term length. 
+
+Comparing the boxplots for prosper rating AA in figure 2 and 3 with figure 4, the number of borrowers in term 3-year (4446) is greater than in the 5-year term 698 borrowers. On the contrary, the average number of investors for the 5-year term is greater (about 250) compared to the number of investors in the 3 year term which is about 175.
+
+Next analysis compares the different types of loan status across different prosper ratings. The analysis ignores 'Current' and 'Final Payment In progress' loan status to focus on borrowers who have completed their loans and those who have delayed payments or have defaulted loans.
+
+```{r}
+#loan status not to be included in the analysis
+loan_status <- c('Current', 'FinalPaymentInProgress')
+
+df5 <- prosper_loan %>%
+  
+  select(LoanStatus, ProsperRatingAlpha, ProsperRatingnumeric) %>%
+  
+  na.omit() %>%
+  
+  filter(!LoanStatus %in% loan_status) %>% # Remove loan status that is not needed in this analysis
+  
+  arrange(desc(ProsperRatingnumeric)) %>%
+  
+  group_by(ProsperRatingAlpha, LoanStatus) %>%
+  
+  summarize(LoanStatus_count = n()) #get count
+
+plot1 <- ggplot()
+
+plot2 <- plot1 + geom_bar(data = df5, 
+                          
+                          aes(x = ProsperRatingAlpha, y = LoanStatus_count, fill = LoanStatus), 
+                          
+                          stat = 'identity', position = 'dodge', width = 1)
+  
+ratingorder <- c('AA', 'A', 'B', 'C', 'D', 'E', 'HR')
+
+plot3 <- plot2 + scale_x_discrete(limits = ratingorder)
+
+
+plot4 <- plot3 + labs(x = '\nPropser Rating', y = 'Count', 
+                      title = 'Figure 5: Loan Status') 
+
+plot5 <- plot4 + my_theme
+
+print(plot5)
+```
+
+Figure 5 indicate that majority of the borrowers from all prosper ratings completed their loans. The degree of being charged-off however increases for lower prosper ratings with a maximum seen in borrowers with D ratings.
+
+A borrower loan is charged-off when it is reaches 121 days past due. 
+A borrower loan is default when the borrower fails to pay his/her loan due reasons like bankruptcy.
+
+Majority of the borrowers completed their loans. One of the reasons for this could be that borrowers are employed. Next section explores the employment status of the borrowers.
+
+```{r}
+df6 <- prosper_loan %>%
+  
+  select(ProsperRatingAlpha, ProsperRatingnumeric, EmploymentStatus) %>%
+  
+  na.omit() %>% #remove missing values
+  
+  arrange(desc(ProsperRatingnumeric)) %>% #arrange in descending order
+  
+  group_by(ProsperRatingAlpha, EmploymentStatus) %>%
+  
+  summarize(EmploymentStatus_count = n()) #get count
+
+plot1 <- ggplot()
+
+plot2 <- plot1 + geom_bar(data = df6, aes(x = ProsperRatingAlpha, 
+                                          
+                                          y = EmploymentStatus_count, fill = EmploymentStatus), 
+                          
+                         stat = 'identity', position = 'dodge', width = 1)
+
+  
+ratingorder <- c('AA', 'A', 'B', 'C', 'D', 'E', 'HR')
+
+plot3 <- plot2 + scale_x_discrete(limits = ratingorder)
+
+
+plot4 <- plot3 + labs(x = '\nProsper Rating', 
+                      y = 'Count', 
+                      title = 'Figure 6: Employment Status') 
+
+plot5 <- plot4 + my_theme
+
+print(plot5)
+
+```
+
+As expected, majority of the borrowers are employed. As we have seen earlier, total number of borrowers in the AA propser rating is quite low. Next lowest borrower population is in the HR ratings group.
+Perhaps the reason for low number of borrowers in the HR rating is probably because of thier applications being denied due to the high probability of them being high risks.
+
+Perhaps, it would be interesting to look at the data on number of original applicants under theese two ratings group to examine the number of denied applicants versus the number of accepted applicants.
+
+Since we have now extablished that majority of the borrowers are employed, it would be interesting to see the distribution of occupation status in the subset of data with only employed borrowers.
+
+For this section of the analysis, job category that had the highest number within each prosper rating was plot. 
+
+Any ambiguous occupations such as 'Professional', 'Executive' and 'Other' that does not clearly state the type of occupation was removed from the analysis
+
+```{r}
+occupation_name <- c('Professional', 'Other', 'Executive') #removed from analysis
+df7 <- prosper_loan %>%
+
+select(Occupation, ProsperRatingAlpha, ProsperRatingnumeric) %>%
+  
+  na.omit() %>%
+  
+  group_by(ProsperRatingAlpha, Occupation) %>%
+  
+  filter(!Occupation %in% occupation_name) %>% #extract only some fields
+  
+  summarize(Occupation_count = n()) %>% #get count
+  
+  group_by(ProsperRatingAlpha) %>%
+  summarize(Occupation_MAxcount = max(Occupation_count),
+            
+            Occupation_categ = Occupation[which.max(Occupation_count)]) # get job category associated with highest occupation number
+
+plot1 <- ggplot()
+
+plot2 <- plot1 + geom_bar(data = df7, aes(x = ProsperRatingAlpha, 
+                                          
+                                          y = Occupation_MAxcount, 
+                                          
+                                          fill = Occupation_categ), 
+                          
+                         stat = 'identity', position = 'dodge', width = .55)
+
+  
+ratingorder <- c('AA', 'A', 'B', 'C', 'D', 'E', 'HR')
+
+plot3 <- plot2 + scale_x_discrete(limits = ratingorder)
+
+
+plot4 <- plot3 + labs(x = '\nProsper Rating', 
+                      
+                      y = 'Count', 
+                      
+                      title = 'Figure 7: Occupation Type') 
+
+plot5 <- plot4 + my_theme
+
+print(plot5)
+
+```
+
+In figure 7, borrowers with high prosper rating have higher paying job. Teacher occupation which could be assumed as a relatively medium income job is a popular occupation for C ratings. While lower ratings like the D, E and HR have the low-income occupation.
+
+This section explores the distribution of employment status duration. Since majority of the borrowers were employed, it would also be interesting to gain some insight on the employment duration.
+
+```{r}
+df8 <- prosper_loan %>%
+  
+  filter(EmploymentStatus == 'Employed') %>% #get only employed data
+  
+  select(EmploymentStatusDuration, 
+         
+         ProsperRatingAlpha, ProsperRatingnumeric) %>%
+  
+  na.omit()
+
+plot1 <- ggplot(df8, aes(EmploymentStatusDuration, 
+                         
+                         color=ProsperRatingAlpha)) + 
+  
+                          geom_density(alpha=0.4, size = 1)
+
+plot2 <- plot1 + labs(x = '\nDuration (days)', 
+                      
+                      y = 'Density', 
+                      
+                      title = 'Figure 8: Employment Status Duration (days) Distribution') 
+
+plot3 <- plot2 + my_theme
+
+suppressWarnings(print(plot3))
+
+
+```
+```{r}
+print('Summary of employment duration (days)')
+
+summary(df8$EmploymentStatusDuration)
+```
+
+The distribution plot is right-skewed suggesting that the borrowers have not been employed for too long for all prosper ratings. Overall, maximum number of days a borrower has been employed is only 745 days (about 2 years) as indicated in the summary table.
+
+Figure 9 examines the distribution of monthly stated income of the borrowers.
+
+```{r}
+df9 <- prosper_loan %>%
+  
+  select(StatedMonthlyIncome, ProsperRatingnumeric, ProsperRatingAlpha) %>%
+  
+  na.omit()
+
+plot1 <- ggplot(df9, aes(StatedMonthlyIncome, 
+                         
+                         color=ProsperRatingAlpha)) + 
+  
+                         geom_density(alpha=0.4, size = 1) + xlim(10,25000)
+
+plot2 <- plot1 + labs(x = '\nStated Monthly Income ($)', 
+                      
+                      y = 'Density', 
+                      
+                      title = 'Figure 9: Stated Monthly Income ($) Distribution') 
+
+plot3 <- plot2 + my_theme
+
+suppressWarnings(print(plot3))
+
+```
+
+Figure 9 is also right-skewed. The distribution peak monthly stated income for lower proper rating (such E and HR) is around $ 3000. The peak shifts to the right for higher prosper ratings.
+
+Figure 10 explores the distribution of monthly debt accumulated. Using existing data on Stated Monthly Income and Debt-to-Income ratio, monthly debt was computed by multiplying the two fields. 
+
+```{r}
+df10 <- prosper_loan %>%
+
+  select(StatedMonthlyIncome, DebtToIncomeRatio, 
+         
+         ProsperRatingnumeric, ProsperRatingAlpha) %>%
+  
+  na.omit() %>%
+  
+  filter(StatedMonthlyIncome > 0 ) %>% # keep data with stated monthly income greater than 0
+  
+  mutate(MonthlyDebt = StatedMonthlyIncome * DebtToIncomeRatio) #compute monthly debt
+
+
+#suppressWarnings(print(ggplot(df10, aes(MonthlyDept, color=ProsperRatingAlpha)) + geom_density(alpha = 0.4, size=1) + xlim(0,6000)))
+
+plot1 <- ggplot(df10, aes(MonthlyDebt, 
+                          
+                          color=ProsperRatingAlpha)) + 
+  
+                          geom_density(alpha=0.4, size = 1) + xlim(0,6000)
+
+plot2 <- plot1 + labs(x = '\nMonthly Debt ($)', 
+                      
+                      y = 'Density', 
+                      
+                      title = 'Figure 10: Monthly Debt ($) Distribution') 
+
+plot3 <- plot2 + my_theme
+
+suppressWarnings(print(plot3))
+
+``` 
+
+Figure 10 is a right-skewed plot with the disruption peak close to $ 1500 taking into account borrowers from all prosper ratings. Borrowers with E ratings have the highest peak monthly debt.
+
+Comparing Figures 9 and 10 for borrowers with AA rating, one would assume that borrowers with high stated monthly income should have lower monthly debt but this sample dataset suggest that this analogy may not always hold good.
+
+Next, figure 11 looks at employment count for two states, New York and Washington.
+
+According to wallethub, 2018 (https://wallethub.com/edu/best-worst-large-cities-to-live-in/14358/), Seatle, WA was ranked top for Economy Rank and New York, NY was ranked number 1 for quality of life.
+
+```{r}
+df11 <- prosper_loan %>%
+  
+  select(BorrowerState) %>%
+  
+  filter(BorrowerState %in% c('WA', 'NY')) %>% #get only data for NY and WA states
+  
+  group_by(BorrowerState) %>%
+  
+  tally()
+
+plot1 <- ggplot()
+
+plot2 <- plot1 + geom_bar(data = df11, 
+                          
+                          aes(x = BorrowerState, y = n, fill = ''), 
+                          
+                         stat = 'identity', position = 'dodge', width = .55)
+
+plot3 <- plot2 + labs(x = '\nYear', 
+                      
+                      y = 'Count', 
+                      
+                      title = 'Figure 11: Borrowers in NY and WA states') 
+
+plot4 <- plot3 + scale_fill_manual(values = 'turquoise3', 
+                                   
+                                   label= 'Borrower count', name ='')
+
+plot5 <- plot4 + my_theme
+
+print(plot5)
+
+
+```
+
+Figure 11 indicates that there are more borrowers from New York state as supposed to Washington state. The number of borrowers from WA state is almost half of that in NY state.
+
+Figure 12 looks at borrower states having maximum investors.
+
+```{r}
+df12 <- prosper_loan %>%
+  
+  select(BorrowerState, Investors) %>%
+  
+  group_by(BorrowerState) %>%
+  
+  summarize(Investor_no = sum(Investors)) %>% #compute sum 
+  
+  arrange(desc(Investor_no)) %>%
+  
+  filter(BorrowerState %in% BorrowerState[1:5]) #get top 5 staes with max investors
+
+plot1 <- ggplot()
+
+plot2 <- plot1 + geom_bar(data = df12, 
+                          
+                          aes(x = BorrowerState, y = Investor_no , fill = ''), 
+                          
+                         stat = 'identity', position = 'dodge', width = .55)
+
+plot3 <- plot2 + labs(x = '\nBorrower State', 
+                      
+                      y = 'No. of Investors', 
+                      
+                      title = 'Figure 12: Borrower states with maximum Investors') 
+
+plot4 <- plot3 + scale_fill_manual(values = 'turquoise3', 
+                                   
+                                   label= 'No. of Investors', name ='')
+
+plot5 <- plot4 + my_theme
+
+print(plot5)
+
+```
+
+Figure 12 shows the top five states that a prefered choice to investors.
+CA state has the highest number of investors. Well, CA is the land of opportunities, true for investors too!
+Other states as shown in figure above have more or less the same of number of investors.
+
+Figure 13 explores employment count for each year and how this translates to loan original amount for years 2010 to 2014.
+
+```{r}
+prosper_loan$LoanOriginationDate <- ymd_hms(as.character(prosper_loan$LoanOriginationDate)) #Convert to datetime format
+
+df13 <- prosper_loan %>%
+  
+  select(EmploymentStatus, 
+         
+         LoanOriginalAmount, LoanOriginationDate) %>%
+  
+  filter(EmploymentStatus == 'Employed') %>%
+  
+  mutate(year_no = year(LoanOriginationDate), #extract year
+         year_no = as.character(year_no)) %>% #convert to character type
+  
+  group_by(year_no) %>%
+  
+  na.omit() %>%
+  
+  summarize(Employment_count = length(EmploymentStatus), #compute stats
+            Avg_loanAmount = mean(LoanOriginalAmount))
+
+plot1 <- ggplot()
+
+plot2 <- plot1 + geom_bar(data = df13, 
+                          
+                          aes(x = year_no, y = Employment_count, fill=''), 
+                          
+                         stat = 'identity', position = 'dodge', width = .25)
+
+plot3 <- plot2 + scale_fill_manual(values = 'turquoise3', 
+                                   
+                                   label= 'Total Employment Count', name ='')
+
+plot4 <- plot3 + geom_point(data=df13, aes(x= year_no, y = Avg_loanAmount)) + 
+  geom_line(data=df13, aes(x= year_no, y = Avg_loanAmount ,group=1, color=''))
+
+plot5 <- plot4 + scale_color_manual(values = 'black', 
+                                    
+                                    label= 'Average Loan Original Amount', name='')
+
+plot6 <- plot5 + labs(x = '\nYear', 
+                      
+                      y = '', 
+                      
+                      title = 
+                        
+                        'Figure 13: Employment Count and Avg Loan Amount/year') 
+
+plot7 <- plot6 + my_theme
+
+print(plot7)
+```
+
+From figure 13, total employment count was the highest in 2013 with a count of nearly 30000. 
+Years 2010 through 2013 saw a steady increase in employment count with a sudden drop in the year 2014. 
+Average loan amount for each year however shows a steady uptrend growth.
+
+In next section, figure 14 explores the lender yield for all available years (2005 through 2014).
+
+Lender yield is a form of compensation that a mortgage broker, acting as the intermediary, receives from the original lender for selling an interest rate to a borrower that is above the lender's par rate for which the borrower qualifies.
+
+Higher lender yield is associated with high risk borrowers (lower prosper ratings).
+
+Note: Read more: Yield Spread Premium https://www.investopedia.com/terms/y/yield_spread_premium.asp#ixzz5MqtOhNuB 
+
+
+```{r}
+df14 <- prosper_loan %>%
+  
+  select(LenderYield, LoanOriginationDate) %>%
+  
+   na.omit() %>%
+  
+  mutate(year_no = year(LoanOriginationDate),
+         year_no = as.character(year_no)) %>%
+  
+  group_by(year_no)
+
+  
+plot1 <- ggplot()
+
+plot2 <- plot1 + geom_bar(data = df14, aes(x = year_no, y = LenderYield, fill=''), 
+                          
+                         stat = 'identity', 
+                         
+                         position = 'dodge', width = .25)
+
+plot3 <- plot2 + geom_hline(yintercept = 0, size =1.5, linetype = 'dashed')
+
+plot4 <- plot3 + labs(x = '\nYear', 
+                      
+                      y = 'Lender Yield (%)', 
+                      
+                      title = 'Figure 14: Lender Yield (%) for each year') 
+
+plot5 <- plot4 + scale_fill_manual(values = 'turquoise3', 
+                                   
+                                   label= 'Lender Yield (%)', name ='')
+
+plot6 <- plot5 + my_theme
+
+print(plot6)
+
+```
+
+In figure 14, maximum lender yield was seen in 2006. Lender yield for the years 2007 to 2011 seem to be stagnant. In the recent years, using 2011 as starting reference point, lender yield is showing a negative trend. 
+This could indicate that the number of default cases have been reducing over the years.
+
+In this section, figure 15 explores lender yield for the year 2013 as this year showed the highest employment count and also has a relatively lower lender yield.
+
+```{r}
+df15 <- prosper_loan %>%
+
+select(ProsperRatingAlpha, ProsperRatingnumeric, LenderYield, LoanOriginationDate) %>%
+
+na.omit() %>%
+
+mutate(year_no = year(LoanOriginationDate),
+       year_no = as.character(year_no)) %>%
+
+filter(year_no == '2013') %>% #data only for 2013
+
+arrange(desc(ProsperRatingnumeric, LenderYield)) %>%
+
+group_by(ProsperRatingnumeric, 
+         
+         ProsperRatingAlpha, LenderYield) %>%
+
+summarize(LenderYield_count = n()) %>% #get count
+
+mutate(Log_LenderYield_count = log10(LenderYield_count)) #convert to log scale since y axis range is very wide
+
+
+plot1 <- ggplot()
+
+plot2 <- plot1 + geom_smooth(data = df15, 
+                             
+                             formula = y ~ x, method='lm', se= FALSE, size = 0.5,
+                             
+                             aes(x=LenderYield, y = Log_LenderYield_count, 
+                                 
+                            color = ProsperRatingAlpha, 
+                            
+                            group= ProsperRatingAlpha))
+
+plot3 <- plot2 + scale_y_continuous(breaks = seq(0,3,1.5), 
+                                    
+                                    minor_breaks = waiver(), limits = c(0,3))
+
+plot4 <- plot3 + labs(x = '\nLender Yield (%)', 
+                      
+                      y = 'Count (Log scale)', 
+                      
+                      title = 
+                        
+                        'Figure 15: Lender Yield (%) per year and prosper ratings for 2013') 
+
+plot5 <- plot4 + facet_wrap(~ProsperRatingAlpha , nrow=7) + 
+  
+         guides(colour = FALSE)
+
+print(plot5)
+
+```
+
+Figure 14 explores lender yield for the year 2014 since this year is the most recent available data and 2014 indicated a sudden drop in employment count after 2013.
+
+```{r}
+df16 <- prosper_loan %>%
+
+select(ProsperRatingAlpha, ProsperRatingnumeric, 
+       
+       LenderYield, LoanOriginationDate) %>%
+
+na.omit() %>%
+
+mutate(year_no = year(LoanOriginationDate),
+       year_no = as.character(year_no)) %>%
+
+filter(year_no == '2014') %>% #data only for 2014
+
+arrange(desc(ProsperRatingnumeric, LenderYield)) %>%
+
+group_by(ProsperRatingnumeric, ProsperRatingAlpha, LenderYield) %>%
+
+summarize(LenderYield_count = n()) %>%
+
+mutate(Log_LenderYield_count = log10(LenderYield_count)) #convert to log scale since y axis range is very wide
+
+
+plot1 <- ggplot()
+
+plot2 <- plot1 + geom_smooth(data = df16, 
+                             
+                             formula = y ~ x, method='lm', se= FALSE, size = 0.5,
+                             
+                             aes(x=LenderYield, y = Log_LenderYield_count, 
+                                 
+                                 color = ProsperRatingAlpha, 
+                                 
+                                 group= ProsperRatingAlpha))
+
+plot3 <- plot2 + scale_y_continuous(breaks = seq(0,3,1.5), 
+                                    
+                                    minor_breaks = waiver(), limits = c(0,3))
+
+plot4 <- plot3 + labs(x = '\nLender Yield (%)', 
+                      
+                      y = 'Count (Log scale)', 
+                      
+                      title = 
+                        
+                        'Figure 16: Lender Yield (%) per year and prosper ratings for 2014') 
+
+plot5 <- plot4 + facet_wrap(~ProsperRatingAlpha , nrow=7) + guides(colour = FALSE)
+
+print(plot5)
+
+```
+
+Figure 15 show wider range of overlap between the different ratings for year 2013. This means that AA ratings does not always gaurantee low risks. Year 2014,in figure 16 although has a drop in emplyoment counts has a much shorter lender yield per each ratings. Especially borrowers in AA group in the year 2014 have a very low lender yield. 
+
+Figure 17 explores total number of borrowers in each year.
+```{r}
+df17 <- prosper_loan %>%
+  
+  select(LoanOriginationDate, LoanKey) %>%
+  
+  na.omit() %>%
+  
+  mutate(year_no = year(LoanOriginationDate),
+         year_no = as.character(year_no)) %>%
+  
+  filter(!year_no %in% '2005') %>%
+  
+  group_by(year_no) %>%
+  
+  summarize(Borrowers_total = length(LoanKey)) #get count of borrowers
+
+plot1 <- ggplot()
+
+plot2 <- plot1 + geom_bar(data = df17, 
+                          
+                          aes(x = year_no, y = Borrowers_total, fill=''), 
+                          
+                         stat = 'identity', position = 'dodge', width = .25)
+
+plot3 <- plot2 + labs(x = '\nYear', 
+                      
+                      y = 'Total No. of Borrowers', 
+                      
+                      title = 'Figure 17: No. of borrowers per year') 
+
+plot4 <- plot3 + scale_fill_manual(values = 'turquoise3', 
+                                   
+                                   label= 'Total No. of borrowers', name ='')
+
+plot5 <- plot4 + my_theme
+
+print(plot5)
+  
+```
+
+Majority of the borrowers were employed. Looking at the subset of employed borrowers,we saw that employement count was highest in 2013. As a result number of borrowers are also maximum for 2013. It is however interesting to see the trend of borrowers from year 2006 to 2014. The current status for 2014 is very close what was observed in the 2007-2008. The great recession recession began in 2007 up until 2009 and is very evident in this plot.
+
+##Final Plots and Summary
+
+The analysis from the prosper loan dataset indicated that the number of borrowers who are employed have gone down from 30000 in 2013 to 10000 in 2014. Nevertheless, loan amount for each year between 2010 and 2013 has shown a steady rate of positive growth.  
+
+Average loan amount for each year was compared with the average debt accumalated each year and is shown in figure 17.
+
+```{r}
+
+df18 <- prosper_loan %>%
+  
+  select(LoanOriginalAmount, LoanOriginationDate, 
+         
+         StatedMonthlyIncome, DebtToIncomeRatio) %>%
+  
+  na.omit() %>%
+  
+  mutate(year_no = year(LoanOriginationDate),
+         year_no = as.character(year_no),
+         Monthlydebt = StatedMonthlyIncome * DebtToIncomeRatio) %>%
+  
+  group_by(year_no) %>%
+  
+  summarize(Avg_Yrly_LoanAmount = mean(LoanOriginalAmount), #compute stats
+            Avg_Yrly_Debt = mean(Monthlydebt))
+
+
+plot1 <- ggplot()
+
+plot2 <- plot1 + geom_point(data=df18, 
+                            
+                            aes(x= year_no, y = Avg_Yrly_LoanAmount)) + 
+  
+                            geom_line(data=df18, aes(x= year_no, 
+                                                     
+                            y =Avg_Yrly_LoanAmount,group=1, color=''))
+
+plot3 <- plot2 + scale_color_manual(values = 'black', 
+                                    
+                                    label= 'Average Loan Original Amount ($)', 
+                                    
+                                    name='')
+
+plot4 <- plot3 + geom_point(data=df18, 
+                            
+                            aes(x= year_no, y = Avg_Yrly_Debt)) + 
+  
+                            geom_line(data=df18, 
+                                      
+                                      aes(x= year_no, y = Avg_Yrly_Debt,
+                                          
+                                          group=1, linetype=''), color = 'red')
+
+plot5 <- plot4 + scale_linetype_manual(values = 'solid', 
+                                       
+                                       label= 'Average Debt Amount ($)', 
+                                       
+                                       name='')
+
+plot6 <- plot5 + labs(x = '\nYear', 
+                      
+                      y = '', 
+                      
+                      title = 
+                        
+                        'Figure 18: Average Loan amount ($) and Average Debt ($) per year') 
+
+plot7 <- plot6 + my_theme
+
+print(plot7)
+
+```
+
+Figure 10 on montlhy debt distrubtion for different prosper ratings indicated a distribution peak at around $ 1500. Comparing the results from figure 10, average debt seem to be rising every year with its maximum at year 2014.. 
+
+The distribution peak in figure 10 reflects the yearly debt amount accumalated in year 2014.
+
+Average debt accumalated per year is very low when compared to the average loan amount per year. This observation was also seen in Figure 5 that indicated majority of the loan status as completed.
+
+Average debt between years 2009 and 2010 is almost flat. This could be because of the fall in loan amount in 2009.
+
+Figure 11 indicated highest employemt count in year 2013. This could be one of the reason for a steep rise in loan amount between 2012 and 2013.
+
+It is difficult however to establish relationship between employment count and loan amount, but the reason for lower debt amounts could be associated with majority of borrowers being employed.
+
+Loan amount for years 2009 to 2014 indicate a steep rising limb.
+
+A linear regression analysis was peformed on the two parameters (yearly average loan amount and yearly average debt) for the years 2009 to 2014 which shows a continuous rising limb. 
+
+```{r}
+year_seq <- seq(2009, 2014, 1) # get teh year sequence required for the analysis
+year_seq <- as.character(year_seq)
+
+df18_lm <- df18 %>%
+  
+  filter(year_no %in% year_seq) %>% #filter out only years 2009-2014
+  
+  mutate(year_regress = seq_along(year_no)) #assign continuous sequence of numbers to perform regression. 
+
+lm_avgLoan <- coef(lm(Avg_Yrly_LoanAmount ~ year_regress, data = df18_lm)) #get coefficients only
+
+sprintf('Average yearly loan rate per year is $ %.2f', lm_avgLoan[[2]])
+
+lm_avgDebt <- coef(lm(Avg_Yrly_Debt ~ year_regress, data = df18_lm))
+
+sprintf('Average yearly debt rate per year is $ %.2f', lm_avgDebt[[2]])
+
+```
+
+Since we now estimated that average loan per year is increasing at the rate of approximately $ 1600 per year. It would be interesting to see how this correlates with the average number of investors per year.
+
+```{r}
+
+df19 <- prosper_loan %>%
+  
+  select(LoanOriginationDate, ProsperRatingAlpha, 
+         
+         ProsperRatingnumeric, Investors) %>%
+  
+  na.omit() %>%
+  
+  mutate(year_no = year(LoanOriginationDate),
+         year_no = as.character(year_no)) %>%
+  
+  group_by(year_no, ProsperRatingAlpha) %>%
+  
+  summarize(Investors_per_Year = sum(Investors)) #get stats
+
+
+plot1 <- ggplot()
+
+plot2 <- plot1 + geom_point(data=df19, 
+                            
+                            aes(x= year_no, y = Investors_per_Year )) + 
+  
+                            geom_line(data=df19, aes(x= year_no, 
+                           
+                            y = Investors_per_Year,group= ProsperRatingAlpha, 
+                           
+                            color= ProsperRatingAlpha)) 
+
+plot3 <- plot2 + geom_dl(data=df19, 
+                         
+                         aes(x= year_no, y= Investors_per_Year, 
+  
+                         label=ProsperRatingAlpha), 
+  
+                          method= list(dl.trans(x=x+0.1), 'last.bumpup', 
+               
+                          cex=0.5, fontface='bold'), color='black')
+
+plot4 <- plot3 + labs(x = '\nYear', 
+                      
+                      y = 'Total Investors', 
+                      
+                      title = 
+                        
+                        'Figure 19: Total investors per year for each prosper ratings') 
+
+plot5 <- plot4 
+
+plot6 <- plot5 + my_theme
+
+print(plot6)
+
+
+```
+
+Figure 4 indicated more number of investors investing in higher prosper ratings. Prosper ratings AA showed highest number of investors expecially for 5-year term length. 
+
+Figure 19 looks to see how these trends in the number of investors change per year.
+
+Prosper rating A has consistently seen more investors in all years except in 2011 where D prosper rating show higher number of investors compared to all other ratings which seem rather interesting. However since 2011, investors for D rating has been dropping.
+
+Year 2014 that saw a drop in employment count since 2013 and similar patterns can also been seen in number of investors between 2013 and 2014.
+
+2013 showed the highest employment count. Similar relations can be seen here with maximum number of investors for all ratings in 2013.
+
+Lender yield for year 2013 in figure 13 indicated that AA ratings may not always mean low risks.  Perhaphs this could be the reason for a drop in number of investors. This drop in number of investors could also be strongly associated with employment count.
+
+We have already established that year 2013 was popular in terms number of borrowers. It would be interesting to further inspect this to see how the borrowers are spread between being home owners or not.
+
+```{r}
+
+df20 <- prosper_loan %>%
+  
+  select(LoanOriginationDate, IsBorrowerHomeowner) %>%
+  
+  mutate(year_no = year(LoanOriginationDate),
+          year_no = as.character(year_no)) %>%
+  
+  na.omit() %>%
+  
+  filter(!year_no %in% '2005') %>% #Year 2005 shows no homeowners, so removing from analysis
+  
+  group_by(year_no, IsBorrowerHomeowner) %>%
+  
+  tally()
+
+plot1 <- ggplot()
+
+plot2 <- plot1 + geom_bar(data = df20, 
+                          
+                          aes(x = year_no, y = n, 
+                              
+                              fill= IsBorrowerHomeowner), 
+                          
+                         stat = 'identity', position = 'dodge', width = .25)
+
+plot3 <- plot2 + labs(x = '\nYear', 
+                      
+                      y = 'Count', 
+                      
+                      title = 'Figure 20: Homeowners count per year') 
+
+plot4 <- plot3 + my_theme
+
+print(plot4)
+
+
+```
+
+Homeowners growth show similar trends as the employment growth with the maximum seen in 2013. Also this trend is same for non-homeowners. So the growth of homeowners through the years and their association with employment count cannot be fully established.
+
+The number of homeowners when compared with non-homeowners were comparitevly less between years 2006 to 2008 and slowly starts to pick from 2009.
+
+Since there is such a close difference between homeowners and non-homeowners, this parameter doesn't seem to be a good choice for investors in their decisions to invest in borrowers.
+
+Overall, although prosper ratings do help in investment decision, this analysis indicates that it is a sound practise to also look at other parameters such as the trend in lender yield from pervious years. Economy growth/employment also plays an important for investors to contribute.
+
+##Reflections
+The findings from the analysis are based on a small subset of parameters. Also, this analysis uses data from 2006-2014. Perhaps having data with a longer period could help in better understand the trends in the historic data and help in predicting future trends.
+
+The biggest challenge in my opinion was exploring and identifying thr variables that could tell an effective story yet keeping it simple. 
+
+Having all the variables in tabular format in a spreadsheet helped to oversome this challenge. 
+Despite the challenges, the data analysis presented with some interesting discussions and findings.
+
+In the future it would be interesting to create a correlation matrix using all the variables to develop a model that best predicts if an applicant is low risk or high risk. 
+
+
